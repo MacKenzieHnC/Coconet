@@ -4,8 +4,6 @@ using BSON
 using Plots
 using MusicTransformer
 
-## Hyper Parameters
-
 function train_model(;
     model = nothing,
     opt = nothing,
@@ -145,8 +143,6 @@ function train_model(;
         savefig(p, string("checkpoint/loss_curve"))
         return p
     end
-
-    ## TRAINING
 
     # Get initial loss
     @info string("Initial Loss:\n")

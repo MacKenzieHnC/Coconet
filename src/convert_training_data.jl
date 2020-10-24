@@ -81,11 +81,6 @@ bach = BSON.load(joinpath(path, name))
     Problem 2: Encoding silences
         What I think I want to do, is have the silent instrument(s) sort of
         hum the other parts to themselves.
-        If it's silent, we set the velocity to 0,
-        HACK: and the (x, y) value to the leading, currently-playing
-            instrument if one is available,
-            HACK: or I guess to the last note it played if no one's playing
-            HACK: or I guess to zero if that fails too
 =#
 
 dataset = []
@@ -107,8 +102,9 @@ for test in [bach[v] for v in [:test, :train, :valid]]
                 if !isnan(pitch)
                     z = 1
                     x, y = Coconet.pitch_to_tonnetz(Integer(pitch))
-                    song[:, timestep, instrument] = [x,y,z]
                 end
+                
+                song[:, timestep, instrument] = [x,y,z]
             end # for each timestep
         end # for each instrument
 
@@ -119,12 +115,7 @@ for test in [bach[v] for v in [:test, :train, :valid]]
 end # for each set
 
 #===============================================================================
-    SECTION 3: Normalization
-===============================================================================#
-# We're gonna edit all the vectors to show (dx, dy) instead of (x, y),
-# since what we really want the algorithm to learn is how music MOVES
-#===============================================================================
-    SECTION 4: Save it
+    SECTION 3: Save it
 ===============================================================================#
 bson(
     joinpath(path, name),
