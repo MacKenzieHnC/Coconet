@@ -1,3 +1,4 @@
+using Coconet
 #=
     The core idea here is that we can derive Tonnetz very simply,
     as a small repeating tile.
@@ -56,10 +57,6 @@
         "negative pitch" could possibly mean.
 =#
 
-# Some scaling factors
-const unit_matrix = [1 0; 0 1]
-const tonnetz_matrix = [1 / 2 0; √3 / 2 √3] # Standard tonnetz where all line segments have length of 1
-
 #= Convert a pitch into a position in the tonnetz grid
 
         Pitch is just the numeric pitch (0-127 inclusive)
@@ -69,7 +66,7 @@ const tonnetz_matrix = [1 / 2 0; √3 / 2 √3] # Standard tonnetz where all lin
             thus sort of minimizing the distance between consecutive notes
             in tonnetz space
 =#
-function pitch_to_tonnetz(pitch::Integer; y_offset = 0::Integer, scaling_factor = unit_matrix,)
+function pitch_to_tonnetz(pitch::Integer; y_offset = 0::Integer)
 
     # Subtract the vertical offset so pitches aren't changed
     pitch = pitch - y_offset
@@ -91,37 +88,37 @@ function pitch_to_tonnetz(pitch::Integer; y_offset = 0::Integer, scaling_factor 
     So add the offset to y to get the correct location =#
     y = y + y_offset
 
-    #= This technique adds some weird scaling,
-        But we can reshape the space however we want
-        NOTE: I have no theoretical justifcation for why
-               we would want to change the scale
-               and in fact, I think it's silly
-               since it's just a linear transformation
-               that we're going to plug into
-               a 10-gazillion-parameter linear algebra machine
-               BUT we can start theorizing geometrically about
-               things like the distance of a note
-               from its major fifth or whatever, so that could be neat =#
-    scaled = scaling_factor * [x; y]
-    x = scaled[1]
-    y = scaled[2]
-
     # We now have an infinite, navigatable grid of pitches
     #   that are related spacially to the tonnetz
     return x, y
 end
 
 # Convert a position on the tonnetz grid back to a pitch
-function tonnetz_to_pitch(x, y, scaling_factor = unit_matrix)
+function tonnetz_to_pitch(x, y)
 
-    # First undo the scaling
-    scaled = scaling_factor * [x; y]
-    x = scaled[1]
-    y = scaled[2]
-
-    # Then just choose it based on its grid position
+    # Choose it based on its grid position
     pitch = x * 4 + y
 
     # Ta-da
     return Integer(round(pitch))
+end
+
+# Convert a song of tonnetz into an array of pitches
+function song_to_pitch_array(song::AbstractArray)
+    pitch_size = size(song, 1)
+    sequence_length = size(song, 2)
+    num_instruments = size(song, 3)
+
+    output = zeros(sequence_length, num_instruments)
+
+    for i in 1:num_instruments
+        for j in 1:sequence_length
+            pitch = NaN
+            if round(song[3, j, i]) > 0
+                pitch = Coconet.tonnetz_to_pitch(song[1:2, j, i])
+            end
+
+            output[i, j] = pitch
+        end
+    end
 end

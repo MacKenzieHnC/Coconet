@@ -1,23 +1,6 @@
 using Flux
 using Random
 
-function mask!(region::AbstractArray, scramble_rate)
-    masked = zeros(size(region)[1])
-    num_masked = Integer(floor(scramble_rate * size(region)[2] * size(region)[3]))
-    idx = [(i,j) for i in 1:size(region)[2], j in 1:size(region)[3]]
-    idx = shuffle(idx)[1:num_masked]
-
-    for n in idx
-        region[:,n...] = masked
-    end
-    return region
-end
-
-function mask(region::AbstractArray, scramble_rate)
-    region = deepcopy(region)
-    return mask!(region, scramble_rate)
-end
-
 function get_batch(dataset, max_sequence::Integer, batch_size::Integer; set::Symbol = :train, max_regions=nothing)
     data = shuffle(dataset[set])
 

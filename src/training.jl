@@ -3,6 +3,7 @@ using Flux
 using BSON
 using Plots
 using MusicTransformer
+using Dates
 
 function train_model(;
     model = nothing,
@@ -56,8 +57,8 @@ function train_model(;
     end
 
     ## Loss
-    function loss(query_data, y)
-        l = y .- model(query_data, pos_data)
+    function loss(query_data, mask, y)
+        l = y .- model(query_data, pos_data, mask=mask)
         l = l .* l
         sum(l)
     end
@@ -81,13 +82,15 @@ function train_model(;
                 song = gpu(song)
                 for region in song
                     # data
-                    pos_data = gpu(get_positional_encoding(region))
-                    query_data = Coconet.mask(region, scramble_rate)
+                    mask = gpu(MusicTransformer.get_mask(region, scramble_rate))
+
+                    query_data = region ./ (mask[1,1,:,:,:] .+ 1)
                     key_data = query_data
                     y = region
+                    pos_data = gpu(get_positional_encoding(region))
 
                     # Loss per region
-                    L_song += loss(query_data, y)
+                    L_song += loss(query_data, mask, y)
                 end
 
                 # Average of song losses across batch
@@ -188,18 +191,26 @@ function train_model(;
                 L_song = 0 # Loss per song
                 song = gpu(song)
                 for region in song
-                    # Data
-                    query_data = Coconet.mask(region, scramble_rate)
+                    # data
+                    mask = gpu(MusicTransformer.get_mask(region, scramble_rate))
+
+                    query_data = region ./ (mask[1,1,:,:,:] .+ 1)
                     key_data = query_data
                     y = region
                     pos_data = gpu(get_positional_encoding(region))
 
                     L_region = 0
 
+                    #time
+                    t = now()
+
                     # Calculate gradient over region
                     ∇_region = gradient(ps) do
-                        L_region = loss(query_data, y)
+                        L_region = loss(query_data, mask, y)
                     end
+
+                    #time
+                    print(string("\n", Dates.canonicalize(now() - t), "\n"))
 
                     push!(∇_song, cpu(∇_region))
                     L_song += L_region
@@ -238,17 +249,17 @@ function train_model(;
         end
 
         # Make it harder if it's doing too well
-        test_ratio = losses[length(losses)][2] / losses[1][2]
-        improvement = 1 - (test_ratio / last_improvement)
+        train_ratio = losses[length(losses)][2] / losses[1][2]
+        improvement = 1 - (train_ratio / last_improvement)
 
-        if improvement > graduation_rate
+        if epoch > 0 && epoch % 2 == 0
             if difficulty_level < length(difficulties)
                 difficulty_level += 1
-                last_improvement = test_ratio
+                last_improvement = train_ratio
                 @info string("Increasing scramble rate to ", difficulties[difficulty_level])
             end
         elseif improvement < 0
-            last_improvment = test_ratio
+            last_improvment = train_ratio
             @warn string("Looks like they're struggling...")
         end
 

@@ -3,7 +3,7 @@ Coconet.train_model(
     # Load your model
     model = nothing,
     opt = nothing,
-    losses = nothing,
+    losses = [(5e6, 5e6)],
 
     # Build model to specs
     head_count = 8,
@@ -11,7 +11,7 @@ Coconet.train_model(
     N = 6,
 
     # Speed it up
-    sequence_length = 32,
+    sequence_length = 128,
     batch_size = 5,
     epochs = 20,
     set_length = nothing,
